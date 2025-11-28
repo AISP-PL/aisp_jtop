@@ -1,0 +1,16 @@
+[Unit]
+Description=Jetson jtop JSON exporter
+After=jtop.service
+Requires=jtop.service
+
+[Service]
+Type=simple
+PermissionsStartOnly=true
+ExecStartPre=/usr/bin/install -d -m 755 /run/jtop
+ExecStartPre=/usr/bin/install -m 644 /dev/null /run/jtop/jtop_stats.json
+ExecStart=/usr/local/bin/jtop_stats
+Restart=always
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target

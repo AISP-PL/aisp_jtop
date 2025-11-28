@@ -111,6 +111,48 @@ More information available at [_advanced usage_](https://rnext.it/jetson_stats/a
 
 ## Docker
 
+## JSON Exporter
+
+A lightweight systemd service `jtop_exporter.service` can periodically dump jtop statistics into a JSON file for external consumers.
+
+Install jetson-stats (host, with sudo) and enable the exporter:
+
+```console
+sudo systemctl enable --now jtop_exporter.service
+```
+
+Default output path:
+```
+/run/jtop/jtop_stats.json
+```
+
+Preview stats (pretty print):
+```console
+jq . /run/jtop/jtop_stats.json
+```
+
+Update frequency: ~1s. Each write is atomic (temporary file rename) to avoid partial reads.
+
+Change output path temporarily:
+```console
+sudo systemctl stop jtop_exporter.service
+sudo env JTOP_EXPORT_PATH=/run/jtop/custom.json systemctl start jtop_exporter.service
+```
+
+Or persist by editing the service file to add an `Environment=JTOP_EXPORT_PATH=/path/file.json` line, then:
+```console
+sudo systemctl daemon-reload
+sudo systemctl restart jtop_exporter.service
+```
+
+Docker usage: mount the JSON file read-only into a container:
+```console
+docker run --rm -v /run/jtop/jtop_stats.json:/data/jtop_stats.json:ro alpine cat /data/jtop_stats.json
+```
+
+If you need higher frequency or alternative formats (e.g. Prometheus exposition), consider wrapping `jtop_stats` binary or extending `jtop.stats_exporter`.
+
+
 You can run directly in Docker jtop, you need only to:
 
 1. Install jetson-stats on your **host**

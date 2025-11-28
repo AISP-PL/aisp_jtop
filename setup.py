@@ -111,8 +111,9 @@ def pypi_installer(installer, obj, copy):
         install_variables(folder, copy=copy)
         # Set service permissions
         set_service_permission()
-        # Install service (linking only for develop)
-        install_service(folder, copy=copy)
+        # Install services (linking only for develop)
+        for service_name in ['jtop.service', 'jtop_exporter.service']:
+            install_service(folder, copy=copy, name=service_name)
     else:
         log.info("Skip install service")
 
@@ -142,5 +143,5 @@ if __name__ == '__main__':
             'install': JTOPInstallCommand,
         },
         # Include data files that need special installation
-        data_files=[('jetson_stats', ['services/jtop.service', 'scripts/jtop_env.sh'])],
+        data_files=[('jetson_stats', ['services/jtop.service', 'services/jtop_exporter.service', 'scripts/jtop_env.sh'])],
     )

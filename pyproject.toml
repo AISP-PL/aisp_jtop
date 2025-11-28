@@ -84,6 +84,7 @@ jtop = "jtop.__main__:main"
 jetson_release = "jtop.jetson_release:main"
 jetson_config = "jtop.jetson_config:main"
 jetson_swap = "jtop.jetson_swap:main"
+jtop_stats = "jtop.stats_exporter:main"
 
 [tool.setuptools]
 packages = ["jtop", "jtop.core", "jtop.gui", "jtop.gui.lib"]
@@ -94,7 +95,7 @@ zip-safe = false
 version = {attr = "jtop.__version__"}
 
 [tool.setuptools.data-files]
-"share/jetson_stats" = ["services/jtop.service", "scripts/jtop_env.sh"]
+"share/jetson_stats" = ["services/jtop.service", "services/jtop_exporter.service", "scripts/jtop_env.sh"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["tests*", "*.tests*", "examples*"]
