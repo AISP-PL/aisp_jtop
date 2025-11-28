@@ -672,4 +672,23 @@ class JtopServer(Process):
         # Set event for all clients
         if not self.sync_event.is_set():
             self.sync_event.set()
+def cli_install_services():
+    """Install or update systemd unit files for jtop and the JSON exporter.
+    Usage: sudo jtop_install_services
+    """
+    import os
+    import sys
+    import logging
+    log = logging.getLogger("jtop_install_services")
+    if os.geteuid() != 0:
+        print("Need sudo/root to install services.", file=sys.stderr)
+        sys.exit(1)
+    services = ["jtop.service", "jtop_exporter.service"]
+    package_root = os.path.dirname(os.path.realpath(__file__))
+    for name in services:
+        try:
+            install_service(package_root=package_root, copy=True, name=name)
+            print(f"Installed/updated {name}")
+        except Exception as e:
+            print(f"Failed {name}: {e}", file=sys.stderr)
 # EOF

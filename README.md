@@ -113,6 +113,22 @@ More information available at [_advanced usage_](https://rnext.it/jetson_stats/a
 
 ## JSON Exporter
 
+### Install systemd units manually after pip install
+
+After `sudo pip install ...` run:
+```console
+sudo jtop_install_services
+```
+This copies/enables:
+- jtop.service (IPC socket)
+- jtop_exporter.service (JSON stats exporter)
+
+Then verify:
+```console
+systemctl status jtop.service
+systemctl status jtop_exporter.service
+```
+
 A lightweight systemd service `jtop_exporter.service` can periodically dump jtop statistics into a JSON file for external consumers.
 
 Install jetson-stats (host, with sudo) and enable the exporter:
