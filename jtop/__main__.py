@@ -19,25 +19,34 @@ import re
 import signal
 import os
 import sys
+
 # import locale
 import argparse
+
 # control command line
 import curses
+
 # Logging
 import logging
+
 # jtop service
 from .service import JtopServer
+
 # jtop client
 from .jtop import jtop
+
 # jtop exception
 from .core.exceptions import JtopException
 from .core.common import get_var
+
 # GUI jtop interface
 from .jetson_config import jtop_config
 from .gui import JTOPGUI, ALL, GPU, CPU, ENGINE, MEM, CTRL, INFO, engine_model
+
 # Load colors
 from .terminal_colors import bcolors
 from .github import jetpack_missing, hardware_missing, engine_gui, get_hardware_log
+
 # Create logger
 logger = logging.getLogger(__name__)
 # Version match
@@ -45,24 +54,28 @@ VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
 # Reference repository
 REPOSITORY = "https://github.com/rbonghi/jetson_stats/issues"
 LOOP_SECONDS = 5
-JTOP_LOG_NAME = 'jtop-error.log'
+JTOP_LOG_NAME = "jtop-error.log"
 
 
 def warning_messages(jetson, no_warnings=False):
     if no_warnings:
         return
     # Read status version
-    hardware = jetson.board['hardware']
+    hardware = jetson.board["hardware"]
     version = get_var(VERSION_RE)
     # Check is well stored the default jetson_clocks configuration
     if jetson.jetson_clocks:
         if not jetson.jetson_clocks.is_config:
-            print("[{status}] Please stop manually jetson_clocks or reboot this board".format(status=bcolors.warning()))
+            print(
+                "[{status}] Please stop manually jetson_clocks or reboot this board".format(
+                    status=bcolors.warning()
+                )
+            )
     # Check if an hardware value is missing
-    if not all([data for name, data in hardware.items() if name not in ['Jetpack']]):
+    if not all([data for name, data in hardware.items() if name not in ["Jetpack"]]):
         hardware_missing(REPOSITORY, hardware, version)
     # Check if jetpack is missing
-    if not hardware['Jetpack'] and hardware['L4T']:
+    if not hardware["Jetpack"] and hardware["L4T"]:
         jetpack_missing(REPOSITORY, hardware, version)
     # Check if model is in map list
     if not engine_model(hardware["Module"]) and hardware["Module"]:
@@ -76,40 +89,107 @@ def exit_signal(signum, frame):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='jtop is system monitoring utility and runs on terminal',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--force', dest='force', help=argparse.SUPPRESS, action="store_true", default=False)
-    parser.add_argument('--health', dest="health", help='Status jtop and fix', action="store_true", default=False)
-    parser.add_argument('--install-service', dest="install_service", help='Install and enable the jtop systemd service',
-                        action="store_true", default=False)
-    parser.add_argument('--error-log', dest="log", help='Generate a log for GitHub', action="store_true", default=False)
-    parser.add_argument('--no-warnings', dest="no_warnings", help='Do not show warnings', action="store_true", default=False)
-    parser.add_argument('--restore', dest="restore", help='Reset Jetson configuration', action="store_true", default=False)
-    parser.add_argument('--loop', dest="loop", help='Automatically switch page every {sec}s'.format(sec=LOOP_SECONDS), action="store_true", default=False)
-    parser.add_argument('--color-filter', dest="color_filter",
-                        help='Change jtop base colors, you can use also JTOP_COLOR_FILTER=True', action="store_true", default=False)
-    parser.add_argument('-r', '--refresh', dest="refresh", help='refresh interval', type=int, default='1000')
-    parser.add_argument('-p', '--page', dest="page", help='Open fix page', type=int, default=1)
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s {version}'.format(version=get_var(VERSION_RE)))
+        description="jtop is system monitoring utility and runs on terminal",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--force",
+        dest="force",
+        help=argparse.SUPPRESS,
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--health",
+        dest="health",
+        help="Status jtop and fix",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--install-service",
+        dest="install_service",
+        help="Install and enable the jtop systemd service",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--error-log",
+        dest="log",
+        help="Generate a log for GitHub",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--no-warnings",
+        dest="no_warnings",
+        help="Do not show warnings",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--restore",
+        dest="restore",
+        help="Reset Jetson configuration",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--loop",
+        dest="loop",
+        help="Automatically switch page every {sec}s".format(sec=LOOP_SECONDS),
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--color-filter",
+        dest="color_filter",
+        help="Change jtop base colors, you can use also JTOP_COLOR_FILTER=True",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-r",
+        "--refresh",
+        dest="refresh",
+        help="refresh interval",
+        type=int,
+        default="1000",
+    )
+    parser.add_argument(
+        "-p", "--page", dest="page", help="Open fix page", type=int, default=1
+    )
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version="%(prog)s {version}".format(version=get_var(VERSION_RE)),
+    )
     # Parse arguments
     args = parser.parse_args()
     # Install jtop service if requested
     if args.install_service:
         if os.geteuid() != 0:
-            print("Install requires superuser privileges. Please run:\nsudo jtop --install-service")
+            print(
+                "Install requires superuser privileges. Please run:\nsudo jtop --install-service"
+            )
             sys.exit(1)
-        logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s - %(message)s')
+        logging.basicConfig(
+            level=logging.INFO, format="[%(levelname)s] %(name)s - %(message)s"
+        )
         package_root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        is_developer = os.path.isdir(os.path.join(package_root, 'tests'))
+        is_developer = os.path.isdir(os.path.join(package_root, "tests"))
         copy = not is_developer
         if not is_developer:
             package_root = None
         try:
             from .core.jetson_variables import install_variables
             from .service import set_service_permission, install_service
+
             install_variables(package_root, copy=copy)
             set_service_permission()
-            install_service(package_root, copy=copy)
+            for service_name in ["jtop.service", "jtop_exporter.service"]:
+                install_service(package_root, copy=copy, name=service_name)
         except JtopException as e:
             print(e)
             sys.exit(1)
@@ -119,9 +199,13 @@ def main():
     # signal.signal(signal.SIGINT, exit_signal)  # Do not needed equivalent to exception KeyboardInterrupt
     signal.signal(signal.SIGTERM, exit_signal)
     # Run jtop service
-    if os.getenv('JTOP_SERVICE', False):
+    if os.getenv("JTOP_SERVICE", False):
         # Initialize logging level
-        logging.basicConfig(level=logging.INFO, filemode='w', format='[%(levelname)s] %(name)s - %(message)s')
+        logging.basicConfig(
+            level=logging.INFO,
+            filemode="w",
+            format="[%(levelname)s] %(name)s - %(message)s",
+        )
         # Run service
         try:
             # Initialize stats server
@@ -140,7 +224,7 @@ def main():
         try:
             with jtop(interval=interval) as jetson:
                 # Write warnings
-                if 'L4T' in jetson.board['hardware']:
+                if "L4T" in jetson.board["hardware"]:
                     warning_messages(jetson, args.no_warnings)
                 # Restore configuration
                 if jetson.ok():
@@ -158,9 +242,15 @@ def main():
     if args.log:
         body = get_hardware_log()
         body += "\n\nLog from jtop {version}\n".format(version=get_var(VERSION_RE))
-        with open('{cwd}/{name}'.format(cwd=os.getcwd(), name=JTOP_LOG_NAME), 'w') as writer:
+        with open(
+            "{cwd}/{name}".format(cwd=os.getcwd(), name=JTOP_LOG_NAME), "w"
+        ) as writer:
             writer.write(body)
-        print("LOG '{name}' generated in {path}".format(name=JTOP_LOG_NAME, path=os.getcwd()))
+        print(
+            "LOG '{name}' generated in {path}".format(
+                name=JTOP_LOG_NAME, path=os.getcwd()
+            )
+        )
         sys.exit(0)
     # jtop client start
     try:
@@ -170,7 +260,7 @@ def main():
         # Open jtop client
         with jtop(interval=interval) as jetson:
             # Call the curses wrapper
-            color_filter = bool(os.getenv('JTOP_COLOR_FILTER', args.color_filter))
+            color_filter = bool(os.getenv("JTOP_COLOR_FILTER", args.color_filter))
             # Build list pages available
             pages = [ALL]
             if jetson.gpu:
@@ -178,13 +268,24 @@ def main():
             pages += [CPU, MEM]
             if jetson.engine:
                 pages += [ENGINE]
-            if jetson.fan or jetson.jetson_clocks is not None or jetson.nvpmodel is not None:
+            if (
+                jetson.fan
+                or jetson.jetson_clocks is not None
+                or jetson.nvpmodel is not None
+            ):
                 pages += [CTRL]
             pages += [INFO]
-            curses.wrapper(JTOPGUI, jetson, pages, init_page=args.page,
-                           loop=args.loop, seconds=LOOP_SECONDS, color_filter=color_filter)
+            curses.wrapper(
+                JTOPGUI,
+                jetson,
+                pages,
+                init_page=args.page,
+                loop=args.loop,
+                seconds=LOOP_SECONDS,
+                color_filter=color_filter,
+            )
             # Write warnings
-            if 'L4T' in jetson.board['hardware']:
+            if "L4T" in jetson.board["hardware"]:
                 warning_messages(jetson, args.no_warnings)
     except (KeyboardInterrupt, SystemExit):
         pass
