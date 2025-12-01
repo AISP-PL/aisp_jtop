@@ -17,6 +17,7 @@
 
 # Logging
 import logging
+
 # Operative system
 # import signal
 import re
@@ -50,6 +51,7 @@ from .core.power import PowerService
 from .core.fan import FanService
 from .core.jetson_clocks import JetsonClocksService
 from .core.nvpmodel import NVPModelService
+
 # Create logger
 logger = logging.getLogger(__name__)
 # Fix connection refused for python 2.7
@@ -68,16 +70,18 @@ VERSION_RE = re.compile(r""".*__version__ = ["'](.*?)['"]""", re.S)
 # Pipe configuration
 # https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch05s13.html
 # https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard
-JTOP_PIPE = '/run/jtop.sock'
-JTOP_USER = 'jtop'
-JTOP_SERVICE_NAME = 'jtop.service'
+JTOP_PIPE = "/run/jtop.sock"
+JTOP_USER = "jtop"
+JTOP_SERVICE_NAME = "jtop.service"
 # Gain timeout lost connection
 TIMEOUT_GAIN = 3
 TIMEOUT_SWITCHOFF = 3.0
 
 
 def status_service(service=JTOP_SERVICE_NAME):
-    return os.system('systemctl is-active --quiet {service}'.format(service=service)) == 0
+    return (
+        os.system("systemctl is-active --quiet {service}".format(service=service)) == 0
+    )
 
 
 def remove_service_pipe():
@@ -91,30 +95,34 @@ def remove_service_pipe():
 
 
 def uninstall_service(name=JTOP_SERVICE_NAME):
-    if os.path.isfile('/etc/systemd/system/{name}'.format(name=name)) or os.path.islink('/etc/systemd/system/{name}'.format(name=name)):
+    if os.path.isfile("/etc/systemd/system/{name}".format(name=name)) or os.path.islink(
+        "/etc/systemd/system/{name}".format(name=name)
+    ):
         logger.info("Found {name}".format(name=name))
         # Check if service is active
         if status_service(service=name):
             # Stop service
             logger.info(" - STOP {name}".format(name=name))
-            sp.call(shlex.split('systemctl stop {name}'.format(name=name)))
+            sp.call(shlex.split("systemctl stop {name}".format(name=name)))
         # Disable service
         logger.info(" - DISABLE {name}".format(name=name))
-        sp.call(shlex.split('systemctl disable {name}'.format(name=name)))
+        sp.call(shlex.split("systemctl disable {name}".format(name=name)))
         # Remove jetson_performance service from /etc/init.d
-        if os.path.isfile('/etc/systemd/system/{name}'.format(name=name)) or os.path.islink('/etc/systemd/system/{name}'.format(name=name)):
+        if os.path.isfile(
+            "/etc/systemd/system/{name}".format(name=name)
+        ) or os.path.islink("/etc/systemd/system/{name}".format(name=name)):
             logger.info(" - REMOVE {name} from /etc/systemd/system".format(name=name))
-            os.remove('/etc/systemd/system/{name}'.format(name=name))
+            os.remove("/etc/systemd/system/{name}".format(name=name))
         # Update service list
         logger.info(" - Reload all daemons")
-        sp.call(shlex.split('systemctl daemon-reload'))
+        sp.call(shlex.split("systemctl daemon-reload"))
         return True
     return False
 
 
 def _resolve_distribution_path(*relative_paths):
     try:
-        dist = metadata.distribution('jetson-stats')
+        dist = metadata.distribution("jetson-stats")
     except metadata.PackageNotFoundError:
         return None
     for relative in relative_paths:
@@ -128,11 +136,11 @@ def _service_template_path(package_root, name):
     candidates = []
     if package_root:
         base = Path(package_root)
-        candidates.append(base / 'services' / name)
+        candidates.append(base / "services" / name)
         candidates.append(base / name)
     distribution_path = _resolve_distribution_path(
-        Path('services') / name,
-        Path('share/jetson_stats') / name,
+        Path("services") / name,
+        Path("share/jetson_stats") / name,
         Path(name),
     )
     if distribution_path:
@@ -142,10 +150,10 @@ def _service_template_path(package_root, name):
         Path(prefix)
         for prefix in (
             sys.prefix,
-            getattr(sys, 'base_prefix', None),
+            getattr(sys, "base_prefix", None),
             sys.exec_prefix,
-            getattr(sys, 'base_exec_prefix', None),
-            os.environ.get('VIRTUAL_ENV'),
+            getattr(sys, "base_exec_prefix", None),
+            os.environ.get("VIRTUAL_ENV"),
         )
         if prefix
     }
@@ -154,7 +162,7 @@ def _service_template_path(package_root, name):
     except ImportError:
         sysconfig = None
     if sysconfig:
-        data_path = sysconfig.get_paths().get('data')
+        data_path = sysconfig.get_paths().get("data")
         if data_path:
             shared_roots.add(Path(data_path))
     try:
@@ -166,17 +174,17 @@ def _service_template_path(package_root, name):
         if user_base:
             shared_roots.add(Path(user_base))
     for root in shared_roots:
-        candidates.append(root / 'share' / 'jetson_stats' / name)
+        candidates.append(root / "share" / "jetson_stats" / name)
     for candidate in candidates:
         if candidate.exists():
             return candidate
-    raise JtopException('Unable to locate {name} template file'.format(name=name))
+    raise JtopException("Unable to locate {name} template file".format(name=name))
 
 
 def install_service(package_root=None, copy=True, name=JTOP_SERVICE_NAME):
     logger.info("Install {name}".format(name=name))
     # Copy or link file
-    service_install_path = '/etc/systemd/system/{name}'.format(name=name)
+    service_install_path = "/etc/systemd/system/{name}".format(name=name)
     service_template = _service_template_path(package_root, name)
     # remove if exist file
     if os.path.isfile(service_install_path) or os.path.islink(service_install_path):
@@ -189,16 +197,22 @@ def install_service(package_root=None, copy=True, name=JTOP_SERVICE_NAME):
         type_service = "Linking"
         os.symlink(str(service_template), service_install_path)
     # Prompt message
-    logger.info(" - {type} {file} -> {path}".format(type=type_service.upper(), file=name, path=service_install_path))
+    logger.info(
+        " - {type} {file} -> {path}".format(
+            type=type_service.upper(), file=name, path=service_install_path
+        )
+    )
     # Update service list
-    cmd_daemon_reload = Command(shlex.split('systemctl daemon-reload'))
+    cmd_daemon_reload = Command(shlex.split("systemctl daemon-reload"))
     try:
         cmd_daemon_reload()
         logger.info(" - Reload all daemons")
     except (OSError, Command.CommandException):
         logger.error("Fail reload all daemons")
     # Enable jetson_stats at startup
-    cmd_service_enable = Command(shlex.split('systemctl enable {name}'.format(name=name)))
+    cmd_service_enable = Command(
+        shlex.split("systemctl enable {name}".format(name=name))
+    )
     try:
         cmd_service_enable()
         logger.info(" - ENABLE {name}".format(name=name))
@@ -206,7 +220,7 @@ def install_service(package_root=None, copy=True, name=JTOP_SERVICE_NAME):
     except (OSError, Command.CommandException):
         logger.error("Fail enable service {name}".format(name=name))
     # Start service
-    cmd_service_start = Command(shlex.split('systemctl start {name}'.format(name=name)))
+    cmd_service_start = Command(shlex.split("systemctl start {name}".format(name=name)))
     try:
         cmd_service_start()
         logger.info(" - START {name}".format(name=name))
@@ -216,13 +230,13 @@ def install_service(package_root=None, copy=True, name=JTOP_SERVICE_NAME):
 
 
 def status_permission_user(group=JTOP_USER):
-    user = os.environ.get('USER', '')
+    user = os.environ.get("USER", "")
     # Get user from sudo
-    sudo_user = os.environ.get('SUDO_USER', '')
+    sudo_user = os.environ.get("SUDO_USER", "")
     # If are both empty assign 'root'
-    user = sudo_user or 'root'
+    user = sudo_user or "root"
     # Check if user is in group
-    cmd_group_user = Command(shlex.split('groups {user}'.format(user=user)))
+    cmd_group_user = Command(shlex.split("groups {user}".format(user=user)))
     try:
         lines = cmd_group_user()
         for line in lines:
@@ -239,7 +253,7 @@ def status_permission_user(group=JTOP_USER):
 
 def status_permission_group(group=JTOP_USER):
     # Check if exist group
-    cmd_group = Command(shlex.split('getent group {group}'.format(group=group)))
+    cmd_group = Command(shlex.split("getent group {group}".format(group=group)))
     try:
         cmd_group()
     except (OSError, Command.CommandException):
@@ -253,37 +267,38 @@ def status_permission(group=JTOP_USER):
 
 
 def unset_service_permission(group=JTOP_USER):
-    user = os.environ.get('USER', '')
+    user = os.environ.get("USER", "")
     # Get user from sudo
-    sudo_user = os.environ.get('SUDO_USER', '')
+    sudo_user = os.environ.get("SUDO_USER", "")
     # If are both empty assign 'root'
-    user = sudo_user or 'root'
+    user = sudo_user or "root"
     # Check if user is in group
     if status_permission_user(group):
         logger.info("Remove {user} from group {group}".format(group=group, user=user))
-        sp.call(shlex.split('gpasswd -d {user} {group}'.format(group=group, user=user)))
+        sp.call(shlex.split("gpasswd -d {user} {group}".format(group=group, user=user)))
     if status_permission_group(group):
         logger.info("Delete group {group}".format(group=group))
-        sp.call(shlex.split('groupdel {group}'.format(group=group)))
+        sp.call(shlex.split("groupdel {group}".format(group=group)))
 
 
 def set_service_permission(group=JTOP_USER):
-    user = os.environ.get('USER', '')
+    user = os.environ.get("USER", "")
     # Get user from sudo
-    sudo_user = os.environ.get('SUDO_USER', '')
+    sudo_user = os.environ.get("SUDO_USER", "")
     # If are both empty assign 'root'
-    user = sudo_user or 'root'
+    user = sudo_user or "root"
     # Make jetson_stats group
     if not status_permission_group(group):
         logger.info("Add new group {group}".format(group=group))
-        sp.call(shlex.split('groupadd {group}'.format(group=group)))
+        sp.call(shlex.split("groupadd {group}".format(group=group)))
     if not status_permission_user(group):
         logger.info("Add {user} to group {group}".format(group=group, user=user))
-        sp.call(shlex.split('usermod -a -G {group} {user}'.format(group=group, user=user)))
+        sp.call(
+            shlex.split("usermod -a -G {group} {user}".format(group=group, user=user))
+        )
 
 
 class JtopManager(SyncManager):
-
     def __init__(self, authkey=None):
         if authkey is None:
             authkey = get_key().encode("utf-8")
@@ -301,12 +316,12 @@ class JtopManager(SyncManager):
 
 class JtopServer(Process):
     """
-        - https://pymotw.com/2/multiprocessing/basics.html
-        - https://pymotw.com/2/multiprocessing/communication.html
-        - https://stackoverflow.com/questions/1829116/how-to-share-variables-across-scripts-in-python
-        - https://stackoverflow.com/questions/45342200/how-to-use-syncmanager-lock-or-event-correctly
-        - https://stackoverflow.com/questions/2545961/how-to-synchronize-a-python-dict-with-multiprocessing
-        - https://docs.python.org/2.7/reference/datamodel.html
+    - https://pymotw.com/2/multiprocessing/basics.html
+    - https://pymotw.com/2/multiprocessing/communication.html
+    - https://stackoverflow.com/questions/1829116/how-to-share-variables-across-scripts-in-python
+    - https://stackoverflow.com/questions/45342200/how-to-use-syncmanager-lock-or-event-correctly
+    - https://stackoverflow.com/questions/2545961/how-to-synchronize-a-python-dict-with-multiprocessing
+    - https://docs.python.org/2.7/reference/datamodel.html
     """
 
     def __init__(self, force=False):
@@ -318,13 +333,15 @@ class JtopServer(Process):
         self.config = Config()
         # Save version jtop
         self._version = deepcopy(get_var(VERSION_RE))
-        logger.info("jetson_stats {version} - server loaded".format(version=self._version))
+        logger.info(
+            "jetson_stats {version} - server loaded".format(version=self._version)
+        )
         # Error queue
         self._error = Queue()
         # Command queue
         self.q = Queue()
         # Speed interval
-        self.interval = Value('d', -1.0)
+        self.interval = Value("d", -1.0)
         # Dictionary to sync
         self.data = {}
         # Event lock
@@ -333,15 +350,19 @@ class JtopServer(Process):
         super(JtopServer, self).__init__()
         # Register stats
         # https://docs.python.org/2/library/multiprocessing.html#using-a-remote-manager
-        JtopManager.register('get_queue', callable=lambda: self.q)
+        JtopManager.register("get_queue", callable=lambda: self.q)
         JtopManager.register("sync_data", callable=lambda: self.data)
-        JtopManager.register('sync_event', callable=lambda: self.event)
+        JtopManager.register("sync_event", callable=lambda: self.event)
         # Generate key and open broadcaster
         self.broadcaster = JtopManager()
         # Load board and platform variables
         data_platform = get_platform_variables()
-        logger.info("Running on Python: {python_version}".format(python_version=data_platform['Python']))
-        self.board = {'hardware': get_hardware()}
+        logger.info(
+            "Running on Python: {python_version}".format(
+                python_version=data_platform["Python"]
+            )
+        )
+        self.board = {"hardware": get_hardware()}
         # From this point are initialized or hardware services
         # Setup cpu service
         self.cpu = CPUService()
@@ -393,117 +414,169 @@ class JtopServer(Process):
                     if not control:
                         continue
                     # If service read the same init message resend it
-                    if 'init' in control:
+                    if "init" in control:
                         self.q.put(control)
                         continue
                     logger.debug("control message {control}".format(control=control))
                     # Manage swap
-                    if 'swap' in control:
-                        swap = control['swap']
-                        if 'command' in swap:
-                            command = swap['command']
-                            if command == 'set':
-                                logger.info("Activating swap in {path}".format(path=swap['path']))
-                                self.memory.swap_set(swap['size'], swap['path'], swap['boot'])
-                            elif command == 'unset':
-                                logger.info("Deactivating swap in {path}".format(path=swap['path']))
-                                self.memory.swap_deactivate(swap['path'])
+                    if "swap" in control:
+                        swap = control["swap"]
+                        if "command" in swap:
+                            command = swap["command"]
+                            if command == "set":
+                                logger.info(
+                                    "Activating swap in {path}".format(
+                                        path=swap["path"]
+                                    )
+                                )
+                                self.memory.swap_set(
+                                    swap["size"], swap["path"], swap["boot"]
+                                )
+                            elif command == "unset":
+                                logger.info(
+                                    "Deactivating swap in {path}".format(
+                                        path=swap["path"]
+                                    )
+                                )
+                                self.memory.swap_deactivate(swap["path"])
                             else:
-                                logger.error("swap command not detected: {command}".format(command=command))
+                                logger.error(
+                                    "swap command not detected: {command}".format(
+                                        command=command
+                                    )
+                                )
                         else:
-                            logger.error("no swap command in this message {message}".format(message=swap))
+                            logger.error(
+                                "no swap command in this message {message}".format(
+                                    message=swap
+                                )
+                            )
                     # Clear cache
-                    if 'clear_cache' in control:
+                    if "clear_cache" in control:
                         # Clear cache
                         self.memory.clear_cache()
                         logger.info("Clear cache")
                     # Set GPU configuration
-                    if 'gpu' in control:
-                        gpu = control['gpu']
-                        if 'command' in gpu:
-                            command = gpu['command']
-                            name = gpu['name']
-                            if command == '3d_scaling':
-                                self.gpu.set_scaling_3D(name, gpu['value'])
-                            elif command == 'railgate':
-                                self.gpu.set_railgate(name, gpu['value'])
+                    if "gpu" in control:
+                        gpu = control["gpu"]
+                        if "command" in gpu:
+                            command = gpu["command"]
+                            name = gpu["name"]
+                            if command == "3d_scaling":
+                                self.gpu.set_scaling_3D(name, gpu["value"])
+                            elif command == "railgate":
+                                self.gpu.set_railgate(name, gpu["value"])
                             else:
-                                logger.error("gpu command not detected: {command}".format(command=command))
+                                logger.error(
+                                    "gpu command not detected: {command}".format(
+                                        command=command
+                                    )
+                                )
                         else:
-                            logger.error("no gpu command in this message {message}".format(message=gpu))
+                            logger.error(
+                                "no gpu command in this message {message}".format(
+                                    message=gpu
+                                )
+                            )
                     # Speed Fan and configuration
-                    if 'fan' in control:
-                        fan = control['fan']
-                        if 'command' in fan:
-                            command = fan['command']
-                            if command == 'profile':
-                                name = fan['name']
-                                profile = fan['profile']
-                                logger.info('Fan \"{name}\" set profile {profile}'.format(name=name, profile=profile))
+                    if "fan" in control:
+                        fan = control["fan"]
+                        if "command" in fan:
+                            command = fan["command"]
+                            if command == "profile":
+                                name = fan["name"]
+                                profile = fan["profile"]
+                                logger.info(
+                                    'Fan "{name}" set profile {profile}'.format(
+                                        name=name, profile=profile
+                                    )
+                                )
                                 self.fan.set_profile(name, profile)
-                            elif command == 'speed':
-                                name = fan['name']
-                                speed = fan['speed']
-                                idx = fan['idx']
-                                logger.info('Fan \"{name}[{idx}]\" set speed {speed}'.format(name=name, idx=idx, speed=speed))
+                            elif command == "speed":
+                                name = fan["name"]
+                                speed = fan["speed"]
+                                idx = fan["idx"]
+                                logger.info(
+                                    'Fan "{name}[{idx}]" set speed {speed}'.format(
+                                        name=name, idx=idx, speed=speed
+                                    )
+                                )
                                 self.fan.set_speed(name, speed, idx)
                             else:
-                                logger.error("fan command not detected: {command}".format(command=command))
+                                logger.error(
+                                    "fan command not detected: {command}".format(
+                                        command=command
+                                    )
+                                )
                         else:
-                            logger.error("no fan command in this message {message}".format(message=fan))
-                    if 'jc' in control:
-                        jc = control['jc']
+                            logger.error(
+                                "no fan command in this message {message}".format(
+                                    message=fan
+                                )
+                            )
+                    if "jc" in control:
+                        jc = control["jc"]
                         # Enable / disable jetson_clocks
-                        if 'enable' in jc:
-                            self.jetson_clocks.set_enable(jc['enable'])
+                        if "enable" in jc:
+                            self.jetson_clocks.set_enable(jc["enable"])
                         # Update jetson_clocks configuration
-                        if 'boot' in jc:
-                            self.jetson_clocks.set_boot(jc['boot'])
+                        if "boot" in jc:
+                            self.jetson_clocks.set_boot(jc["boot"])
                         # Clear configuration
-                        if 'clear' in jc:
+                        if "clear" in jc:
                             self.jetson_clocks.clear()
                     # Decode nvp model
-                    if 'nvp' in control:
-                        nvpmodel = control['nvp']
-                        nvpmodel_id = nvpmodel['id']
-                        nvpmodel_force = nvpmodel['force']
+                    if "nvp" in control:
+                        nvpmodel = control["nvp"]
+                        nvpmodel_id = nvpmodel["id"]
+                        nvpmodel_force = nvpmodel["force"]
                         # Set new NV Power Mode
-                        logger.info("Set new NV Power Model ID {id}".format(id=nvpmodel_id))
+                        logger.info(
+                            "Set new NV Power Model ID {id}".format(id=nvpmodel_id)
+                        )
                         self.nvpmodel.set_nvpmodel_id(nvpmodel_id, nvpmodel_force)
                     # Initialize tegrastats speed
-                    if 'interval' in control:
-                        interval = control['interval']
+                    if "interval" in control:
+                        interval = control["interval"]
                         # Run stats
                         if self._timer_reader.open(interval=interval):
                             # Set interval value
                             self.interval.value = interval
                             # Status start tegrastats
-                            logger.info("jtop timer thread started {interval}ms".format(interval=int(interval * 1000)))
+                            logger.info(
+                                "jtop timer thread started {interval}ms".format(
+                                    interval=int(interval * 1000)
+                                )
+                            )
                         # send configuration board
                         init = {
-                            'version': self._version,
-                            'board': self.board,
-                            'interval': self.interval.value,
-                            'memory': self.memory.swap_path(),
-                            'fan': self.fan.get_configs(),
-                            'jc': self.jetson_clocks.exists(),
+                            "version": self._version,
+                            "board": self.board,
+                            "interval": self.interval.value,
+                            "memory": self.memory.swap_path(),
+                            "fan": self.fan.get_configs(),
+                            "jc": self.jetson_clocks.exists(),
                         }
                         # If nvpmodel exist load all modes
                         if self.nvpmodel.exists():
-                            init['nvpmodel'] = {
-                                'models': self.nvpmodel.get_all_nvpmodels(),
-                                'default': self.nvpmodel.get_default()
+                            init["nvpmodel"] = {
+                                "models": self.nvpmodel.get_all_nvpmodels(),
+                                "default": self.nvpmodel.get_default(),
                             }
                         # Push initialization string
-                        self.q.put({'init': init})
+                        self.q.put({"init": init})
                     # Manage jetson_clocks
-                    if 'config' in control:
-                        command = control['config']
-                        if command == 'reset':
-                            logger.info('Reset configuration')
+                    if "config" in control:
+                        command = control["config"]
+                        if command == "reset":
+                            logger.info("Reset configuration")
                             self.config.clear()
                     # Update timeout interval
-                    timeout = TIMEOUT_GAIN if interval <= TIMEOUT_GAIN else interval * TIMEOUT_GAIN
+                    timeout = (
+                        TIMEOUT_GAIN
+                        if interval <= TIMEOUT_GAIN
+                        else interval * TIMEOUT_GAIN
+                    )
                 except queue.Empty:
                     self.sync_event.clear()
                     # Reset CPU estimation
@@ -539,13 +612,17 @@ class JtopServer(Process):
             gid = getgrnam(JTOP_USER).gr_gid
         except KeyError:
             # User does not exist
-            raise JtopException("Group {jtop_user} does not exist!".format(jtop_user=JTOP_USER))
+            raise JtopException(
+                "Group {jtop_user} does not exist!".format(jtop_user=JTOP_USER)
+            )
         # Remove old pipes if exists
         if self.force:
             self.remove_files()
         # If exist JTOP pipe raise exception
         if os.path.exists(JTOP_PIPE):
-            raise JtopException("Service already active! Please check before run it again")
+            raise JtopException(
+                "Service already active! Please check before run it again"
+            )
         # Start broadcaster
         try:
             self.broadcaster.start()
@@ -621,16 +698,16 @@ class JtopServer(Process):
         # Make configuration dict
         data = {}
         # -- UPTIME --
-        data['uptime'] = get_uptime()
+        data["uptime"] = get_uptime()
         # -- CPU --
         # Read CPU data
-        data['cpu'] = self.cpu.get_status()
+        data["cpu"] = self.cpu.get_status()
         # -- GPU ---
         # Read GPU status
-        data['gpu'] = self.gpu.get_status()
+        data["gpu"] = self.gpu.get_status()
         # -- All processes
         total, table = self.processes.get_status()
-        data['processes'] = table
+        data["processes"] = table
         # -- RAM --
         # Read memory data
         # In this dictionary are collected
@@ -638,29 +715,29 @@ class JtopServer(Process):
         # - SWAP
         # - EMC (If available)
         # - IRAM (If available)
-        data['mem'] = self.memory.get_status(total)
+        data["mem"] = self.memory.get_status(total)
         # -- Engines --
         # Read all engines available
         # Can be empty for x86 architecture
-        data['engines'] = self.engine.get_status()
+        data["engines"] = self.engine.get_status()
         # -- Temperature --
-        data['temperature'] = self.temperature.get_status()
+        data["temperature"] = self.temperature.get_status()
         # -- Power --
-        data['power'] = self.power.get_status()
+        data["power"] = self.power.get_status()
         # -- FAN --
         # Update status fan speed
-        data['fan'] = self.fan.get_status()
+        data["fan"] = self.fan.get_status()
         # -- JETSON_CLOCKS --
         # Jetson Clock to check if is running need to read the status from:
         # CPU, EMC, GPU, ENGINES
         # If not empty return status
         if self.jetson_clocks.exists():
             # Get status jetson_clocks
-            data['jc'] = self.jetson_clocks.get_status(data)
+            data["jc"] = self.jetson_clocks.get_status(data)
         # -- NVP MODEL --
         # Read nvpmodel status, ID, name, and status thread
         if self.nvpmodel.exists():
-            data['nvp'] = self.nvpmodel.get_status()
+            data["nvp"] = self.nvpmodel.get_status()
         return data
 
     def jtop_stats(self):
@@ -672,23 +749,6 @@ class JtopServer(Process):
         # Set event for all clients
         if not self.sync_event.is_set():
             self.sync_event.set()
-def cli_install_services():
-    """Install or update systemd unit files for jtop and the JSON exporter.
-    Usage: sudo jtop_install_services
-    """
-    import os
-    import sys
-    import logging
-    log = logging.getLogger("jtop_install_services")
-    if os.geteuid() != 0:
-        print("Need sudo/root to install services.", file=sys.stderr)
-        sys.exit(1)
-    services = ["jtop.service", "jtop_exporter.service"]
-    package_root = os.path.dirname(os.path.realpath(__file__))
-    for name in services:
-        try:
-            install_service(package_root=package_root, copy=True, name=name)
-            print(f"Installed/updated {name}")
-        except Exception as e:
-            print(f"Failed {name}: {e}", file=sys.stderr)
+
+
 # EOF

@@ -85,7 +85,6 @@ jetson_release = "jtop.jetson_release:main"
 jetson_config = "jtop.jetson_config:main"
 jetson_swap = "jtop.jetson_swap:main"
 jtop_stats = "jtop.stats_exporter:main"
-jtop_install_services = "jtop.service:cli_install_services"
 
 [tool.setuptools]
 packages = ["jtop", "jtop.core", "jtop.gui", "jtop.gui.lib"]
